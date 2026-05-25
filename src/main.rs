@@ -42,7 +42,7 @@ fn main() {
         println!("SHA-256: {}", hash);
 
         match file2sha256::query_malwarebazaar(&hash, &api_key) {
-            Ok(result) => println!("MalwareBazaar response:\n{}", result),
+            Ok(result) => println!("{}", file2sha256::parse_response(&result)),
             Err(e) => eprintln!("API error: {}", e),
         }
         return;
@@ -50,20 +50,9 @@ fn main() {
 
     if let Some(hash) = cli.hash {
     let api_key = config::get_or_prompt_api_key();
-
-    let clean_hash = hash
-        .strip_prefix("sha256:")
-        .unwrap_or(&hash)
-        .to_string();
-
+    
     match file2sha256::query_malwarebazaar(&hash, &api_key) {
-        Ok(result) => {
-            if result.trim().is_empty() {
-                println!("No response from API — hash may not be in MalwareBazaar");
-            } else {
-                println!("{}", result);
-            }
-        }
+        Ok(result) => println!("{}", file2sha256::parse_response(&result)),
         Err(e) => eprintln!("API error: {}", e),
     }
     return;
