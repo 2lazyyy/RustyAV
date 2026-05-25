@@ -1,5 +1,7 @@
 mod config;
-mod file2sha256;
+mod scanner;
+use scanner::file2sha256;
+use scanner::heuristic;
 
 use clap::Parser;
 
@@ -36,6 +38,8 @@ fn main() {
 
     if let Some(path) = cli.file {
         let api_key = config::get_or_prompt_api_key();
+
+        heuristic::display_file_info(&path);
 
         let hash = file2sha256::hash_file(&path)
             .expect("Could not hash file");
