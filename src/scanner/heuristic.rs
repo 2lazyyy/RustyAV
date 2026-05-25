@@ -12,6 +12,66 @@ pub struct PeInfo {
     pub imports:  Vec<String>,
 }
 
+#[derive(Debug)]
+pub struct ScoreSystem {
+    pub score: u32,
+    pub reasons: Vec<String>,
+    pub categories: Vec<Category>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Category {
+    ProcessInjection,
+    ProcessHollowing,
+    ReflectiveLoading,
+    Persistence,
+    AntiDebug,
+    AntiVM,
+    Packed,
+    Downloader,
+    Keylogger,
+    CredentialAccess,
+    Ransomware,
+    NetworkBeaconing,
+    PrivilegeEscalation,
+}
+
+pub struct ImportRule {
+    pub category: Category,
+    pub score: u32,
+}
+
+const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
+    (
+        "VirtualAlloc",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 15,
+        },
+    ),
+    (
+        "WriteProcessMemory",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 20,
+        },
+    ),
+    (
+        "CreateRemoteThread",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 25,
+        },
+    ),
+    (
+        "IsDebuggerPresent",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 10,
+        },
+    ),
+];
+
 //  File Type Detection
 
 pub fn detect_file_type(path: &str) -> Option<FileTypeInfo> {
@@ -105,3 +165,10 @@ pub fn display_file_info(path: &str) {
         println!("Imports:  {}", pe.imports.join(", "));
     }
 }
+
+const SUSPICIOUS_IMPORTS: &[(&str, u32)] = &[
+    ("VirtualAlloc", 15),
+    ("WriteProcessMemory", 20),
+    ("CreateRemoteThread", 25),
+    ("IsDebuggerPresent", 10),
+];
