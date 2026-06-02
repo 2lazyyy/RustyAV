@@ -25,38 +25,37 @@ fn main() {
     let cli = Cli::parse();
 
     if cli.reset_key {
-        config::delete_api_key();
-        let key = config::prompt_for_api_key();
-        config::save_api_key(&key);
+        config::delete_key();
+        let key = config::prompt();
+        config::save_key(&key);
         return;
     }
 
     if cli.config_path {
-        println!("{:?}", config::config_path());
+        println!("{:?}", config::path());
         return;
     }
 
     if let Some(path) = cli.file {
-        let api_key = config::get_or_prompt_api_key();
+        let api_key = config::prompt_key();
+        heuristic::display(&path);
 
-        heuristic::display_file_info(&path);
-
-        let hash = file2sha256::hash_file(&path)
+        let hash = file2sha256::hash(&path)
             .expect("Could not hash file");
         println!("SHA-256: {}", hash);
 
-        match file2sha256::query_malwarebazaar(&hash, &api_key) {
-            Ok(result) => println!("{}", file2sha256::parse_response(&result)),
+        match file2sha256::query_api(&hash, &api_key) {
+            Ok(result) => println!("{}", file2sha256::response(&result)),
             Err(e) => eprintln!("API error: {}", e),
         }
         return;
     }
 
     if let Some(hash) = cli.hash {
-    let api_key = config::get_or_prompt_api_key();
+    let api_key = config::prompt_key();
     
-    match file2sha256::query_malwarebazaar(&hash, &api_key) {
-        Ok(result) => println!("{}", file2sha256::parse_response(&result)),
+    match file2sha256::query_api(&hash, &api_key) {
+        Ok(result) => println!("{}", file2sha256::response(&result)),
         Err(e) => eprintln!("API error: {}", e),
     }
     return;

@@ -74,7 +74,7 @@ const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
 
 //  File Type Detection
 
-pub fn detect_file_type(path: &str) -> Option<FileTypeInfo> {
+pub fn detect_mime(path: &str) -> Option<FileTypeInfo> {
     let bytes = std::fs::read(path).ok()?;
 
     if let Ok(obj) = Object::parse(&bytes) {
@@ -97,12 +97,12 @@ pub fn detect_file_type(path: &str) -> Option<FileTypeInfo> {
 
     let mime = tree_magic_mini::from_u8(&bytes);
     Some(FileTypeInfo {
-        extension: mime_to_extension(mime).to_string(),
+        extension: file_type(mime).to_string(),
         mime_type: mime.to_string(),
     })
 }
 
-fn mime_to_extension(mime: &str) -> &str {
+fn file_type(mime: &str) -> &str {
     match mime {
         "application/pdf"     => "pdf",
         "application/zip"     => "zip",
@@ -116,9 +116,8 @@ fn mime_to_extension(mime: &str) -> &str {
         _                     => "unknown",
     }
 }
-//  PE Info
 
-pub fn extract_pe_info(path: &str) -> Option<PeInfo> {
+pub fn extract_pe(path: &str) -> Option<PeInfo> {
     let bytes = std::fs::read(path).ok()?;
     let pe = match Object::parse(&bytes).ok()? {
         Object::PE(pe) => pe,
@@ -149,26 +148,18 @@ pub fn extract_pe_info(path: &str) -> Option<PeInfo> {
 
     Some(PeInfo { kind, arch, sections, imports })
 }
-//  Display
 
-pub fn display_file_info(path: &str) {
+pub fn display(path: &str) {
     println!("\n=== File Info ===");
 
-    match detect_file_type(path) {
+    match detect_mime(path) {
         Some(info) => println!("Type: {} ({})", info.extension, info.mime_type),
         None       => println!("Type: Unknown"),
     }
 
-    if let Some(pe) = extract_pe_info(path) {
+    if let Some(pe) = extract_pe(path) {
         println!("Kind: {} | Arch: {}", pe.kind, pe.arch);
         println!("Sections: {}", pe.sections.join(", "));
         println!("Imports:  {}", pe.imports.join(", "));
     }
 }
-
-const SUSPICIOUS_IMPORTS: &[(&str, u32)] = &[
-    ("VirtualAlloc", 15),
-    ("WriteProcessMemory", 20),
-    ("CreateRemoteThread", 25),
-    ("IsDebuggerPresent", 10),
-];

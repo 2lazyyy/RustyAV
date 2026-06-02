@@ -4,7 +4,7 @@ use reqwest::blocking::Client;
 use std::collections::HashMap;
 use serde_json::Value;
 
-pub fn parse_response(json_str: &str) -> String {
+pub fn response(json_str: &str) -> String {
     let json: Value = match serde_json::from_str(json_str) {
         Ok(v) => v,
         Err(_) => return "Failed to parse response".to_string(),
@@ -41,7 +41,7 @@ pub fn parse_response(json_str: &str) -> String {
     )
 }
 
-pub fn hash_file(path: &str) -> io::Result<String> {
+pub fn hash(path: &str) -> io::Result<String> {
     let mut file = fs::File::open(path)?;
     let mut hasher = Sha256::new();
     io::copy(&mut file, &mut hasher)?;
@@ -49,7 +49,7 @@ pub fn hash_file(path: &str) -> io::Result<String> {
     Ok(format!("{:x}", hash))
 }
 
-pub fn query_malwarebazaar(sha256: &str, api_key: &str) -> Result<String, Box<dyn std::error::Error>> {
+pub fn query_api(sha256: &str, api_key: &str) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::new();
 
     let mut params = HashMap::new();

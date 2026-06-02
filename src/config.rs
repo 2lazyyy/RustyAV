@@ -8,7 +8,7 @@ struct Config {
     api_key: Option<String>,
 }
 
-pub fn config_path() -> PathBuf {
+pub fn path() -> PathBuf {
     let mut path = dirs::home_dir().expect("Could not find home directory");
     path.push(".rustyav");
     fs::create_dir_all(&path).expect("Could not create config directory");
@@ -16,8 +16,8 @@ pub fn config_path() -> PathBuf {
     path
 }
 
-fn load_config() -> Config {
-    let path = config_path();
+fn load() -> Config {
+    let path = path();
     if !path.exists() {
         return Config::default();
     }
@@ -25,37 +25,36 @@ fn load_config() -> Config {
     serde_json::from_str(&content).unwrap_or_default()
 }
 
-fn save_config(config: &Config) {
+fn save(config: &Config) {
     let content = serde_json::to_string_pretty(config).expect("Could not serialize config");
-    fs::write(config_path(), content).expect("Could not save config");
+    fs::write(path(), content).expect("Could not save config");
 }
 
-pub fn load_api_key() -> Option<String> {
-    load_config().api_key.filter(|s| !s.is_empty())
+pub fn load_key() -> Option<String> {
+    load().api_key.filter(|s| !s.is_empty())
 }
 
-pub fn save_api_key(key: &str) {
-    let mut config = load_config();
+pub fn save_key(key: &str) {
+    let mut config = load();
     config.api_key = Some(key.trim().to_string());
-    save_config(&config);
-    println!("API key saved to {:?}", config_path());
+    save(&config);
+    println!("API key saved to {:?}", path());
 }
 
-pub fn delete_api_key() {
-    let mut config = load_config();
+pub fn delete_key() {
+    let mut config = load();
     if config.api_key.is_some() {
         config.api_key = None;
-        save_config(&config);
+        save(&config);
         println!("API key removed.");
     } else {
         println!("No API key found.");
     }
 }
 
-pub fn prompt_for_api_key() -> String {
+pub fn prompt() -> String {
     println!();
     println!("WARNING: No MalwareBazaar API key found.");
-    println!("Get a free key at https://bazaar.abuse.ch/api/");
     println!();
     print!("Enter your API key: ");
     io::stdout().flush().unwrap();
@@ -65,12 +64,12 @@ pub fn prompt_for_api_key() -> String {
     key.trim().to_string()
 }
 
-pub fn get_or_prompt_api_key() -> String {
-    match load_api_key() {
+pub fn prompt_key() -> String {
+    match load_key() {
         Some(key) => key,
         None => {
-            let key = prompt_for_api_key();
-            save_api_key(&key);
+            let key = prompt();
+            save_key(&key);
             key
         }
     }
