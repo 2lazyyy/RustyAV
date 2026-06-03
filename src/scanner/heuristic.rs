@@ -21,19 +21,46 @@ pub struct ScoreSystem {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Category {
+
+    // function imports
+
     ProcessInjection,
     ProcessHollowing,
     ReflectiveLoading,
     Persistence,
     AntiDebug,
-    AntiVM,
     Packed,
     Downloader,
     Keylogger,
     CredentialAccess,
     Ransomware,
-    NetworkBeaconing,
+    Networking_C2,
     PrivilegeEscalation,
+    Timing,
+    Discovery,
+    File_Manipulation,
+
+    // string imports
+
+    ShellExecution,
+    PowerShellExecution,
+    EncodedPowerShell,
+    ScriptExecution,
+    LOLBinExecution,
+    LOLBinDownload,
+    RegistryPersistence,
+    ServicePersistence,
+    TempDirectoryUsage,
+    AppDataUsage,
+    AccountDiscovery,
+    PrivilegeDiscovery,
+    NetworkActivity,
+    UnixShellReference,
+    DownloadActivity,
+    RansomPayment,
+    Tor,
+    VMDetection,
+    SandboxDetection,
 }
 
 pub struct ImportRule {
@@ -46,28 +73,620 @@ const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
         "VirtualAlloc",
         ImportRule {
             category: Category::ProcessInjection,
-            score: 15,
+            score: 1,
         },
+    ),
+    (
+        "VirtualAllocEx",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 2,
+        }
     ),
     (
         "WriteProcessMemory",
         ImportRule {
             category: Category::ProcessInjection,
-            score: 20,
+            score: 3,
         },
     ),
     (
         "CreateRemoteThread",
         ImportRule {
             category: Category::ProcessInjection,
-            score: 25,
+            score: 3,
+        },
+    ),
+    (
+        "NtCreateThreadEx",
+        ImportRuleFunc {
+            category: Category::ProcessInjection,
+            score: 3,
+        },
+    ),
+    (
+        "QueueUserAPC",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 2,
+        },
+    ),
+    (
+        "SetThreadContext",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 2,
+        },
+    ),
+    (
+        "OpenProcess",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 1,
+        },
+    ),
+    (
+        "NtUnmapViewOfSection",
+        ImportRule {
+            category: Category::ProcessHollowing,
+            score: 3,
         },
     ),
     (
         "IsDebuggerPresent",
         ImportRule {
             category: Category::AntiDebug,
-            score: 10,
+            score: 2,
+        },
+    ),
+    (
+        "CheckRemoteDebuggerPresent",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 2,
+        },
+    ),
+    (
+        "NtQueryInformationProcess",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 2,
+        },
+    ),
+    (
+        "GetTickCount",
+        ImportRule {
+            category: Category::Timing,
+            score: 1,
+        },
+    ),
+    (
+        "Sleep",
+        ImportRule {
+            category: Category::Timing,
+            score: 1,
+        },
+    ),
+    (
+        "NtDelayExecution",
+        ImportRule {
+            category: Category::Timing,
+            score: 2,
+        },
+    ),
+    (
+        "AdjustTokenPrivileges",
+        ImportRule {
+            category: Category::PrivilegeEscalation,
+            score: 2,
+        },
+    ),
+    (
+        "OpenProcessToken",
+        ImportRule {
+            category: Category::PrivilegeEscalation,
+            score: 1,
+        },
+    ),
+    (
+        "LookupPrivilegeValue",
+        ImportRule {
+            category: Category::PrivilegeEscalation,
+            score: 1,
+        },
+    ),
+    (
+        "RegSetValueExA",
+        ImportRule {
+            category: Category::Persistence,
+            score: 2,
+        },
+    ),
+    (
+        "RegSetValueExW",
+        ImportRule {
+            category: Category::Persistence,
+            score: 2,
+        },
+    ),
+    (
+        "RegCreateKeyExA",
+        ImportRule {
+            category: Category::Persistence,
+            score: 1,
+        },
+    ),
+    (
+        "RegCreateKeyExW",
+        ImportRule {
+            category: Category::Persistence,
+            score: 1,
+        },
+    ),
+    (
+        "SHSetValue",
+        ImportRule {
+            category: Category::Persistence,
+            score: 2,
+        },
+    ),
+    (
+        "WSAStartup",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "InternetOpenA",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "InternetOpenW",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "HttpSendRequestA",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "HttpSendRequestW",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "WinHttpOpen",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "connect",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "SetWindowsHookExA",
+        ImportRule {
+            category: Category::Keylogger,
+            score: 3,
+        },
+    ),
+    (
+        "SetWindowsHookExW",
+        ImportRule {
+            category: Category::Keylogger,
+            score: 3,
+        },
+    ),
+    (
+        "GetAsyncKeyState",
+        ImportRule {
+            category: Category::Keylogger,
+            score: 2,
+        },
+    ),
+    (
+        "GetKeyboardState",
+        ImportRule {
+            category: Category::Keylogger,
+            score: 3,
+        },
+    ),
+    (
+        "GetSystemInfo",
+        ImportRule {
+            category: Category::Discovery,
+            score: 1,
+        },
+    ),
+    (
+        "GetComputerNameA",
+        ImportRule {
+            category: Category::Discovery,
+            score: 1,
+        },
+    ),
+    (
+        "GetComputerNameW",
+        ImportRule {
+            category: Category::Discovery,
+            score: 1,
+        },
+    ),
+    (
+        "EnumProcesses",
+        ImportRule {
+            category: Category::Discovery,
+            score: 2,
+        },
+    ),
+    (
+        "CreateToolhelp32Snapshot",
+        ImportRule {
+            category: Category::Discovery,
+            score: 1,
+        },
+    ),
+    (
+        "MoveFileExA",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+    (
+        "MoveFileExW",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+    (
+        "DeleteFileA",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+    (
+        "DeleteFileW",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+    (
+        "CryptEncrypt",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 3,
+        },
+    ),
+    (
+        "CryptGenKey",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 3,
+        },
+    ),
+    (
+        "BCryptEncrypt",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 3,
+        },
+    ),
+];
+
+const SUSPICIOUS_STRINGS: &[(&str, ImportRule)] = &[
+    // Execution via shell
+    (
+        "cmd.exe /c",
+        ImportRule {
+            category: Category::ShellExecution,
+            score: 2,
+        },
+    ),
+    (
+        "cmd /c",
+        ImportRule {
+            category: Category::ShellExecution,
+            score: 2,
+        },
+    ),
+    (
+        "powershell -e",
+        ImportRule {
+            category: Category::EncodedPowerShell,
+            score: 3,
+        },
+    ),
+    (
+        "powershell -enc",
+        ImportRule {
+            category: Category::EncodedPowerShell,
+            score: 3,
+        },
+    ),
+    (
+        "powershell -nop",
+        ImportRule {
+            category: Category::PowerShellExecution,
+            score: 2,
+        },
+    ),
+    (
+        "powershell -w hidden",
+        ImportRule {
+            category: Category::PowerShellExecution,
+            score: 2,
+        },
+    ),
+    (
+        "wscript.exe",
+        ImportRule {
+            category: Category::ScriptExecution,
+            score: 2,
+        },
+    ),
+    (
+        "cscript.exe",
+        ImportRule {
+            category: Category::ScriptExecution,
+            score: 2,
+        },
+    ),
+    (
+        "mshta.exe",
+        ImportRule {
+            category: Category::LOLBinExecution,
+            score: 3,
+        },
+    ),
+    (
+        "rundll32.exe",
+        ImportRule {
+            category: Category::LOLBinExecution,
+            score: 2,
+        },
+    ),
+    (
+        "regsvr32.exe",
+        ImportRule {
+            category: Category::LOLBinExecution,
+            score: 2,
+        },
+    ),
+    (
+        "certutil -decode",
+        ImportRule {
+            category: Category::LOLBinExecution,
+            score: 3,
+        },
+    ),
+    (
+        "bitsadmin /transfer",
+        ImportRule {
+            category: Category::Downloader,
+            score: 3,
+        },
+    ),
+
+    // Persistence
+    (
+        "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
+        ImportRule {
+            category: Category::Persistence,
+            score: 2,
+        },
+    ),
+    (
+        "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon",
+        ImportRule {
+            category: Category::Persistence,
+            score: 2,
+        },
+    ),
+    (
+        "SYSTEM\\CurrentControlSet\\Services",
+        ImportRule {
+            category: Category::Persistence,
+            score: 2,
+        },
+    ),
+
+    // Suspicious paths
+    (
+        "%TEMP%",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+    (
+        "\\AppData\\Roaming",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+    (
+        "\\AppData\\Local\\Temp",
+        ImportRule {
+            category: Category::File_Manipulation,
+            score: 1,
+        },
+    ),
+
+    // Credential / privilege strings
+    (
+        "SeDebugPrivilege",
+        ImportRule {
+            category: Category::PrivilegeEscalation,
+            score: 2,
+        },
+    ),
+    (
+        "net user",
+        ImportRule {
+            category: Category::Discovery,
+            score: 2,
+        },
+    ),
+    (
+        "net localgroup administrators",
+        ImportRule {
+            category: Category::PrivilegeEscalation,
+            score: 3,
+        },
+    ),
+
+    // Network indicators
+    (
+        "http://",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "https://",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "ftp://",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 1,
+        },
+    ),
+    (
+        "/bin/sh",
+        ImportRule {
+            category: Category::Downloader,
+            score: 2,
+        },
+    ),
+    (
+        "wget ",
+        ImportRule {
+            category: Category::Downloader,
+            score: 2,
+        },
+    ),
+    (
+        "curl ",
+        ImportRule {
+            category: Category::Downloader,
+            score: 2,
+        },
+    ),
+
+    // Ransomware
+    (
+        "YOUR FILES HAVE BEEN ENCRYPTED",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 3,
+        },
+    ),
+    (
+        "bitcoin",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 2,
+        },
+    ),
+    (
+        ".onion",
+        ImportRule {
+            category: Category::Networking_C2,
+            score: 3,
+        },
+    ),
+    (
+        "CryptoLocker",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 3,
+        },
+    ),
+    (
+        "WannaCry",
+        ImportRule {
+            category: Category::Ransomware,
+            score: 3,
+        },
+    ),
+
+    // Evasion / anti-analysis
+    (
+        "IsDebuggerPresent",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 2,
+        },
+    ),
+    (
+        "VirtualBox",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 2,
+        },
+    ),
+    (
+        "VMware",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 2,
+        },
+    ),
+    (
+        "VBOX",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 2,
+        },
+    ),
+    (
+        "SandboxEnvironment",
+        ImportRule {
+            category: Category::AntiDebug,
+            score: 3,
+        },
+    ),
+
+    // Injection strings
+    (
+        "VirtualAllocEx",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 2,
+        },
+    ),
+    (
+        "CreateRemoteThread",
+        ImportRule {
+            category: Category::ProcessInjection,
+            score: 2,
         },
     ),
 ];
@@ -163,3 +782,9 @@ pub fn display(path: &str) {
         println!("Imports:  {}", pe.imports.join(", "));
     }
 }
+
+/*
+ Add extraction and matching the strings and functions to a file.
+Apply total count score of a file.
+ 
+ */
