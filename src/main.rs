@@ -2,7 +2,6 @@ mod config;
 mod scanner;
 use scanner::file2sha256;
 use scanner::heuristic;
-
 use clap::Parser;
 
 #[derive(Parser)]
@@ -22,6 +21,7 @@ struct Cli {
     }
 
 fn main() {
+    
     let cli = Cli::parse();
 
     if cli.reset_key {
@@ -59,7 +59,7 @@ fn main() {
         Err(e) => eprintln!("API error: {}", e),
     }
     return;
+    
 }
-
     println!("No arguments provided. Use --help for usage.");
 }

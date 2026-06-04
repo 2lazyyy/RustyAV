@@ -1,4 +1,7 @@
 use goblin::Object;
+use rust_strings::{FileConfig, strings, Encoding};
+use std::path::Path;
+use tree_magic_mini::from_u8;
 
 pub struct FileTypeInfo {
     pub extension: String,
@@ -34,11 +37,11 @@ pub enum Category {
     Keylogger,
     CredentialAccess,
     Ransomware,
-    Networking_C2,
+    NetworkingC2,
     PrivilegeEscalation,
     Timing,
     Discovery,
-    File_Manipulation,
+    FileManipulation,
 
     // string imports
 
@@ -66,6 +69,22 @@ pub enum Category {
 pub struct ImportRule {
     pub category: Category,
     pub score: u32,
+}
+
+impl ScoreSystem {
+    pub fn new() -> Self {
+        Self {
+            score: 0,
+            reasons: Vec::new(),
+            categories: Vec::new(),
+        }
+    }
+
+    pub fn add(&mut self, rule: &ImportRule, reason: &str) {
+        self.score += rule.score;
+        self.categories.push(rule.category.clone());
+        self.reasons.push(reason.to_string());
+    }
 }
 
 const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
@@ -99,7 +118,7 @@ const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
     ),
     (
         "NtCreateThreadEx",
-        ImportRuleFunc {
+        ImportRule {
             category: Category::ProcessInjection,
             score: 3,
         },
@@ -233,49 +252,49 @@ const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
     (
         "WSAStartup",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "InternetOpenA",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "InternetOpenW",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "HttpSendRequestA",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "HttpSendRequestW",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "WinHttpOpen",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "connect",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
@@ -345,28 +364,28 @@ const SUSPICIOUS_IMPORTS: &[(&str, ImportRule)] = &[
     (
         "MoveFileExA",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
     (
         "MoveFileExW",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
     (
         "DeleteFileA",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
     (
         "DeleteFileW",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
@@ -514,21 +533,21 @@ const SUSPICIOUS_STRINGS: &[(&str, ImportRule)] = &[
     (
         "%TEMP%",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
     (
         "\\AppData\\Roaming",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
     (
         "\\AppData\\Local\\Temp",
         ImportRule {
-            category: Category::File_Manipulation,
+            category: Category::FileManipulation,
             score: 1,
         },
     ),
@@ -560,21 +579,21 @@ const SUSPICIOUS_STRINGS: &[(&str, ImportRule)] = &[
     (
         "http://",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "https://",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
     (
         "ftp://",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 1,
         },
     ),
@@ -618,7 +637,7 @@ const SUSPICIOUS_STRINGS: &[(&str, ImportRule)] = &[
     (
         ".onion",
         ImportRule {
-            category: Category::Networking_C2,
+            category: Category::NetworkingC2,
             score: 3,
         },
     ),
@@ -714,7 +733,7 @@ pub fn detect_mime(path: &str) -> Option<FileTypeInfo> {
         }
     }
 
-    let mime = tree_magic_mini::from_u8(&bytes);
+    let mime = from_u8(&bytes);
     Some(FileTypeInfo {
         extension: file_type(mime).to_string(),
         mime_type: mime.to_string(),
@@ -768,9 +787,78 @@ pub fn extract_pe(path: &str) -> Option<PeInfo> {
     Some(PeInfo { kind, arch, sections, imports })
 }
 
+//score system for comparing score with imports
+
+pub fn score_imports(imports: &[String], score: &mut ScoreSystem) {
+    for imp in imports {
+        for (name, rule) in SUSPICIOUS_IMPORTS {
+            if imp == name {
+                score.add(
+                    rule,
+                    &format!("Import match: {}", name)
+                );
+            }
+        }
+    }
+}
+
+//score system for comparing score with strings
+
+pub fn score_strings(
+    strings: &[(String, u64)],
+    score: &mut ScoreSystem,
+) {
+    for (s, _) in strings {
+        for (pattern, rule) in SUSPICIOUS_STRINGS {
+            if s.contains(pattern) {
+                score.add(
+                    rule,
+                    &format!("String match: {}", pattern)
+                );
+            }
+        }
+    }
+}
+
+// extract ASCII and UTF-8 strings from file.
+pub fn extract_strings(path: &str) -> Vec<(String, u64)> {
+
+    let file = FileConfig::new(Path::new(path))
+        .with_min_length(9)
+        .with_encoding(Encoding::ASCII)
+        .with_encoding(Encoding::UTF16LE);
+
+    match strings(&file) {
+        Ok(result) => {
+            println!("FOUND: {}", result.len());
+            result
+        }
+        Err(e) => {
+            eprintln!("Failed to extract strings: {e}");
+            Vec::new() // return empty vector
+        }
+    }
+}
+
+// Analyzes results and returns data adding to total score if melicious actions are performed.
+
+pub fn analyze(path: &str) -> ScoreSystem {
+    let mut score = ScoreSystem::new();
+
+    let strings = extract_strings(path);
+    score_strings(&strings, &mut score);
+
+    if let Some(pe) = extract_pe(path) {
+        score_imports(&pe.imports, &mut score);
+    }
+
+    score
+}
+
 pub fn display(path: &str) {
     println!("\n=== File Info ===");
 
+    // prints the file type.
     match detect_mime(path) {
         Some(info) => println!("Type: {} ({})", info.extension, info.mime_type),
         None       => println!("Type: Unknown"),
@@ -781,10 +869,20 @@ pub fn display(path: &str) {
         println!("Sections: {}", pe.sections.join(", "));
         println!("Imports:  {}", pe.imports.join(", "));
     }
-}
 
-/*
- Add extraction and matching the strings and functions to a file.
-Apply total count score of a file.
- 
- */
+    // analyzes score
+
+    let result = analyze(path);
+
+    println!("\n=== Scan Results ===");
+    println!("Score: {}", result.score);
+
+    println!("Categories hit: {}", result.categories.len());
+    println!("Rules triggered: {}", result.reasons.len());
+
+    println!("\nReasons:");
+    for r in result.reasons.iter().take(10) {
+        println!("- {}", r);
+    }
+    
+}
