@@ -1,7 +1,4 @@
-mod config;
-mod scanner;
 use scanner::file2sha256;
-use scanner::heuristic;
 use clap::Parser;
 
 #[derive(Parser)]
